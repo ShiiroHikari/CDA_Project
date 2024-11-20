@@ -1,0 +1,8 @@
+
+/.ipynb_checkpoints
+Generate_data/.ipynb_checkpoints/__init__-checkpoint.py
+Generate_data/.ipynb_checkpoints/arrival_time-checkpoint.py
+Generate_data/.ipynb_checkpoints/matrix-checkpoint.py
+Generate_data/.ipynb_checkpoints/model-checkpoint.py
+Generate_data/.ipynb_checkpoints/signal-checkpoint.py
+*.pyc
