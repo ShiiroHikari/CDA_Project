@@ -15,7 +15,7 @@ from scipy.signal import butter, filtfilt, hilbert
 import data_generation.arrival_time
 
 # Generate signal with discrete exponential tails and random radiation in the coda
-def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_duration=random.uniform(20, 60), plot=False):
+def generate_diracs(delta_pP, delta_sP, dt=0.1, duration=60, tau=3.0, coda_duration=random.uniform(20, 60), plot=False):
     """
     Generates a signal with Diracs for P, pP, and sP, each followed by an exponential tail 
     represented by a series of Diracs, with random sign flips in the coda.
@@ -23,7 +23,7 @@ def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_dura
     Parameters:
     - delta_pP: delay pP-P in seconds
     - delta_sP: delay sP-P in seconds
-    - dt: sampling step (in seconds); 100 Hz
+    - dt: sampling step (in seconds); 10 Hz
     - duration: total signal duration (in seconds)
     - tau: time constant for exponential decay (in seconds)
     - coda_duration: maximum duration of the tail (in seconds)
@@ -38,9 +38,9 @@ def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_dura
     signal = np.zeros_like(time)
     
     # Function to add an exponential tail as Diracs with random flips
-    def add_coda_diracs_with_sign(signal, start_index, amplitude, initial_sign):
+    def add_coda_diracs(signal, start_index, amplitude, initial_sign):
         sign = initial_sign
-        for i in range(int(coda_duration / dt)):
+        for i in range(1, int(coda_duration / dt)):
             index = start_index + i
             if index >= len(signal):  # If exceeding signal duration
                 break
@@ -51,9 +51,9 @@ def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_dura
     
     # Amplitude and radiation (random sign) of the P wave
     amplitude_P = random.uniform(0.5, 1.0)  # Amplitude between 0.5 and 1
-    sign_P = random.choice([-1, 1])  # Random sign
-    signal[0] = sign_P * amplitude_P  # Dirac at 0 (P wave)
-    add_coda_diracs_with_sign(signal, 0, amplitude_P, sign_P)  # Add tail to the P wave
+    sign_P = random.choice([-1, 1])  # Random sign for P to simulate radiation pattern at source
+    signal[0] = sign_P * amplitude_P  # Simulate P-wave dirac
+    add_coda_diracs(signal, 0, amplitude_P, sign_P)  # Add tail to simulate exponential energy decrease
     
     # Position of Diracs and tails
     pP_index = int(delta_pP / dt)
@@ -61,17 +61,17 @@ def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_dura
     
     # pP
     if pP_index < len(signal):
-        amplitude_pP = amplitude_P * random.uniform(0, 1.1)  # Between 0% and 110% of P
-        sign_pP = random.choice([-1, 1])  # Random sign for pP
+        amplitude_pP = amplitude_P * random.uniform(0, 1.1)  # Amplitude between 0% and 110% of P
+        sign_pP = random.choice([-1, 1])  # Random sign for pP to simulate radiation pattern at source
         signal[pP_index] = sign_pP * amplitude_pP
-        add_coda_diracs_with_sign(signal, pP_index, amplitude_pP, sign_pP)
+        add_coda_diracs(signal, pP_index, amplitude_pP, sign_pP) # Add tail to simulate exponential energy decrease
     
     # sP
     if sP_index < len(signal):
-        amplitude_sP = amplitude_P * random.uniform(0, 1.1)  # Between 0% and 110% of P
-        sign_sP = random.choice([-1, 1])  # Random sign for sP
+        amplitude_sP = amplitude_P * random.uniform(0, 1.1)  # Amplitude between 0% and 110% of P
+        sign_sP = random.choice([-1, 1])  # Random sign for sP to simulate radiation pattern at source
         signal[sP_index] = sign_sP * amplitude_sP
-        add_coda_diracs_with_sign(signal, sP_index, amplitude_sP, sign_sP)
+        add_coda_diracs(signal, sP_index, amplitude_sP, sign_sP) # Add tail to simulate exponential energy decrease
 
     if plot is True:
         plt.figure(figsize=(12,5))
@@ -88,13 +88,13 @@ def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_dura
 
 
 # Convolution of the signal with a wavelet
-def generate_ricker_wavelet(f_c=1.65, dt=0.01, length=1.0):
+def generate_ricker_wavelet(f_c=1.65, dt=0.1, length=1.0):
     """
     Generates a Ricker wavelet.
     
     Parameters:
     - f_c: central frequency (Hz) ; center of 0.8-2.5 later filter
-    - dt: sampling step (s); 100 Hz
+    - dt: sampling step (s); 10 Hz
     - length: total duration of the wavelet (s)
     
     Returns:
@@ -103,7 +103,7 @@ def generate_ricker_wavelet(f_c=1.65, dt=0.01, length=1.0):
     """
     t = np.arange(-length / 2, length / 2, dt)
     w = (1 - 2 * (np.pi * f_c * t)**2) * np.exp(-(np.pi * f_c * t)**2)
-    w /= np.sum(np.abs(w)) # Normalize the wavelet
+    w /= np.sum(np.abs(w)) # Normalize the wavelet to avoid amplification
     
     return w, t
 
@@ -194,9 +194,11 @@ def bandpass_filter(signal, lowcut=0.8, highcut=2.5, fs=100, order=3):
     high = highcut / nyquist
     b, a = butter(order, [low, high], btype='band')  # Filter coefficients
     filtered_signal = filtfilt(b, a, signal)  # Apply the filter
-    filtered_signal -= np.mean(filtered_signal) 
+
+    # Z-score normalization
+    filtered_signal_normalized = (filtered_signal - np.mean(filtered_signal)) / np.std(filtered_signal)
     
-    return filtered_signal
+    return filtered_signal_normalized
 
 # Hilbert envelope extraction
 def extract_hilbert_envelope(signal):
