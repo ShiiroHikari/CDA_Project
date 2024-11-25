@@ -336,13 +336,13 @@ def generate_matrix(num_stations=50):
     # Get depth (same for all)
     depth = results[0][1][2]
 
-    # Initialiser la matrice des signaux
-    num_samples = len(results[0][0])  # Nombre de points par signal
+    # Initialize signal matrix
+    num_samples = len(results[0][0])  # Number of points per signal
     signal_matrix = np.zeros((num_stations, num_samples))
     
-    # Construire la matrice des signaux
+    # Build signal matrix
     for i, (envelope, source, station) in enumerate(results):
-        # Ajouter l'enveloppe normalisée à la matrice
+        # Add normalized envelope to matrix
         signal_matrix[i, :] = envelope
 
     return signal_matrix, depth

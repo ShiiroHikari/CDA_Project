@@ -11,7 +11,7 @@ import random
 
 # Earth parameters
 R_Earth = 6371e3
-Vp = 8000         # vitesse onde P en m/s
+Vp = 8000               # vitesse onde P en m/s
 Vs = Vp / math.sqrt(3)  # vitesse onde S en m/s
 
 # Source coordinates
@@ -36,6 +36,22 @@ def haversine(lat1, lon1, lat2, lon2):
 def chord_distance(delta):
     return 2 * R_Earth * math.sin(delta / 2)
 
+# Direct distance
+def to_cartesian(lat, lon, depth):
+    R = 6371e3
+    lat_rad = math.radians(lat)
+    lon_rad = math.radians(lon)
+    r = R - depth
+    x = r * math.cos(lat_rad) * math.cos(lon_rad)
+    y = r * math.cos(lat_rad) * math.sin(lon_rad)
+    z = r * math.sin(lat_rad)
+    return x, y, z
+
+def direct_distance(lat1, lon1, dep1, lat2, lon2, dep2):
+    x1, y1, z1 = to_cartesian(lat1, lon1, dep1)
+    x2, y2, z2 = to_cartesian(lat2, lon2, dep2)
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+
 # Generate valid station (30-90°)
 def generate_station(lat_epi, lon_epi):
     while True:
@@ -50,11 +66,13 @@ def generate_station(lat_epi, lon_epi):
 
 # Compute travel times
 def travel_times(lat1, lon1, dep1, lat2, lon2):
+    # P arrival time
+    P_distance = direct_distance(lat1, lon1, dep1, lat2, lon2, 0)
+    tP = P_distance / Vp
+
+    # pP and sP distance
     delta = haversine(lat1, lon1, lat2, lon2)
     depth_distance = chord_distance(delta)
-
-    # P arrival time
-    tP = depth_distance / Vp
 
     # pP arrival time
     t_hypo_epi = dep1 / Vp  # Hypocenter to epicenter
