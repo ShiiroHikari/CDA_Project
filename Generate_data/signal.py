@@ -334,7 +334,7 @@ def generate_matrix(num_stations=50):
     results = generate_signals(num_stations=num_stations)
 
     # Get depth (same for all)
-    depth = results[0][1,2]
+    depth = results[0][1][2]
 
     # Initialiser la matrice des signaux
     num_samples = len(results[0][0])  # Nombre de points par signal

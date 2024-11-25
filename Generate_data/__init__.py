@@ -12,4 +12,4 @@ __all__ = [
 from . import arrival_time
 from . import signal
 from . import matrix
-from . import model
+from . import crash_model
