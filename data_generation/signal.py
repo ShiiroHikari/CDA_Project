@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import random
 import math
 from scipy.signal import butter, filtfilt, hilbert
-import Generate_data.arrival_time
+import data_generation.arrival_time
 
 # Generate signal with discrete exponential tails and random radiation in the coda
 def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_duration=random.uniform(20, 60), plot=False):
@@ -220,7 +220,7 @@ def extract_hilbert_envelope(signal):
 # Generate signal from delta_pP and delta_sP
 def generate_one_signal(plot=False):
     # Generate arrival times
-    deltas, source, station = Generate_data.arrival_time.generate_arrival_samples(num_stations=1)
+    deltas, source, station = data_generation.arrival_time.generate_arrival_samples(num_stations=1)
     delta_pP, delta_sP = deltas[0][0], deltas[0][1]
     
     # Generate diracs
@@ -304,7 +304,7 @@ def generate_signals(num_stations=50):
     - results : list of tuples (envelope, source, station) for each station
     """
     # Generate arrival times for multiple stations
-    deltas, source, stations = Generate_data.arrival_time.generate_arrival_samples(num_stations)
+    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations)
     
     results = []
     

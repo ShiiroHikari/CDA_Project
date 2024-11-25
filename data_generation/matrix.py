@@ -8,7 +8,7 @@ Created on Sat Nov 19 23:57:18 2024
 
 
 import numpy as np
-import Generate_data.signal
+import data_generation.signal
 
 # Generate one matrix
 def generate_matrix(num_stations=50):
@@ -23,7 +23,7 @@ def generate_matrix(num_stations=50):
     - signal_matrix : matrix with one line per signal
     - depth : the depth corresponding to this matrix
     """
-    results = Generate_data.signal.generate_signals(num_stations=num_stations)
+    results = data_generation.signal.generate_signals(num_stations=num_stations)
 
     # Get depth (same for all)
     depth = results[0][1][2] # from 1st sample
@@ -40,7 +40,7 @@ def generate_matrix(num_stations=50):
 
 
 # Generate multiple matrix for model training
-def generate_dataset(num_entries=1000, num_stations=50):
+def data_generationset(num_entries=1000, num_stations=50):
     """
     Generates a dataset containing signal matrices and their corresponding depths.
     
@@ -52,8 +52,8 @@ def generate_dataset(num_entries=1000, num_stations=50):
     - X : numpy array of shape (num_entries, 1, num_stations, X) (signal matrices)
     - y : numpy array of shape (num_entries,) (depths)
     """
-    data_matrix = []  # Liste pour stocker les matrices
-    data_depth = []  # Liste pour stocker les profondeurs
+    data_matrix = []
+    data_depth = [] 
     
     for i in range(num_entries):
         # Generate signal matrix and depth

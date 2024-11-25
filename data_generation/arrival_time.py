@@ -38,10 +38,9 @@ def chord_distance(delta):
 
 # Direct distance
 def to_cartesian(lat, lon, depth):
-    R = 6371e3
     lat_rad = math.radians(lat)
     lon_rad = math.radians(lon)
-    r = R - depth
+    r = R_Earth - depth
     x = r * math.cos(lat_rad) * math.cos(lon_rad)
     y = r * math.cos(lat_rad) * math.sin(lon_rad)
     z = r * math.sin(lat_rad)
