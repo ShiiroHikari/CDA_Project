@@ -15,7 +15,7 @@ from scipy.signal import butter, filtfilt, hilbert
 import data_generation.arrival_time
 
 # Generate signal with discrete exponential tails and random radiation in the coda
-def generate_diracs(delta_pP, delta_sP, dt=0.1, duration=60, tau=3.0, coda_duration=random.uniform(20, 60), plot=False):
+def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_duration=random.uniform(20, 60), plot=False):
     """
     Generates a signal with Diracs for P, pP, and sP, each followed by an exponential tail 
     represented by a series of Diracs, with random sign flips in the coda.
@@ -23,7 +23,7 @@ def generate_diracs(delta_pP, delta_sP, dt=0.1, duration=60, tau=3.0, coda_durat
     Parameters:
     - delta_pP: delay pP-P in seconds
     - delta_sP: delay sP-P in seconds
-    - dt: sampling step (in seconds); 10 Hz
+    - dt: sampling step (in seconds); 100 Hz
     - duration: total signal duration (in seconds)
     - tau: time constant for exponential decay (in seconds)
     - coda_duration: maximum duration of the tail (in seconds)
@@ -88,13 +88,13 @@ def generate_diracs(delta_pP, delta_sP, dt=0.1, duration=60, tau=3.0, coda_durat
 
 
 # Convolution of the signal with a wavelet
-def generate_ricker_wavelet(f_c=1.65, dt=0.1, length=1.0):
+def generate_ricker_wavelet(f_c=1.65, dt=0.01, length=1.0):
     """
     Generates a Ricker wavelet.
     
     Parameters:
     - f_c: central frequency (Hz) ; center of 0.8-2.5 later filter
-    - dt: sampling step (s); 10 Hz
+    - dt: sampling step (s); 100 Hz
     - length: total duration of the wavelet (s)
     
     Returns:
