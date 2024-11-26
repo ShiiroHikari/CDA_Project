@@ -15,7 +15,7 @@ from scipy.signal import butter, filtfilt, hilbert
 import data_generation.arrival_time
 
 # Generate signal with discrete exponential tails and random radiation in the coda
-def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_duration=random.uniform(20, 60), plot=False):
+def generate_diracs(delta_pP, delta_sP, source, station, dt=0.01, duration=60, tau=3.0, plot=False):
     """
     Generates a signal with Diracs for P, pP, and sP, each followed by an exponential tail 
     represented by a series of Diracs, with random sign flips in the coda.
@@ -33,6 +33,11 @@ def generate_diracs(delta_pP, delta_sP, dt=0.01, duration=60, tau=3.0, coda_dura
     - signal: array containing the signal
     - time: array containing the corresponding time instances
     """
+    # Compute coda duration from distance between station and epicenter
+    P_velocity = 7.5e3 # average P-waves velocity in the crust and upper mantle
+    dist_epi = data_generation.arrival_time.direct_distance(source[0], source[1], source[2], station[0], station[1], 0)
+    coda_duration = int(dist_epi / P_velocity)
+    
     # Discrete time
     time = np.arange(0, duration, dt)
     signal = np.zeros_like(time)
@@ -120,7 +125,10 @@ def convolve_signal_with_wavelet(signal, time, plot=False):
     - signal_convolved: convolved signal
     """
     wavelet, wavelet_time = generate_ricker_wavelet()
-    signal_convolved = np.convolve(signal, wavelet, mode="same")
+    signal_convolved_full = np.convolve(signal, wavelet, mode="full") # Using mode "full" to minimize artifacts
+    valid_length = len(signal)
+    start_index = (len(signal_convolved_full) - valid_length) // 2
+    signal_convolved = signal_convolved_full[start_index:start_index + valid_length]
     
     if plot is True:
         plt.figure(figsize=(12, 6))
@@ -222,11 +230,11 @@ def extract_hilbert_envelope(signal):
 # Generate signal from delta_pP and delta_sP
 def generate_one_signal(plot=False):
     # Generate arrival times
-    deltas, source, station = data_generation.arrival_time.generate_arrival_samples(num_stations=1)
+    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=1)
     delta_pP, delta_sP = deltas[0][0], deltas[0][1]
     
     # Generate diracs
-    diracs, time = generate_diracs(delta_pP, delta_sP)
+    diracs, time = generate_diracs(delta_pP, delta_sP, source, stations[0])
 
     # Generate signal
     signal = convolve_signal_with_wavelet(diracs, time)
@@ -291,7 +299,7 @@ def generate_one_signal(plot=False):
         plt.tight_layout()
         plt.show()
         
-    return envelope, source, station
+    return envelope, source, stations
     
     
 # Generate signal from delta_pP and delta_sP for multiple stations
@@ -312,7 +320,7 @@ def generate_signals(num_stations=50):
     
     for i, (delta_pP, delta_sP) in enumerate(deltas):
         # Generate diracs
-        diracs, time = generate_diracs(delta_pP, delta_sP)
+        diracs, time = generate_diracs(delta_pP, delta_sP, source, stations[i])
         
         # Generate signal
         signal = convolve_signal_with_wavelet(diracs, time)
