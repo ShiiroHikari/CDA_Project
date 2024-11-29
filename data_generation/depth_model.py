@@ -83,7 +83,7 @@ class DepthModel(nn.Module):
 
 
 # Run the model (train and test)
-def train_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance=True):
+def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, include_distance=True):
     # Prepare train and test datasets
     X, y, D, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
     print("Succesfully generated train dataset.")
@@ -183,9 +183,9 @@ def train_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance
     print("Succesfull test.")
 
     # Save the model
-    model_name = device.type + "_DepthModel.pth"
-    torch.save(model.state_dict(), model_name)
-    print(f"Succesfull saved model as {model_name}.")
+    model_path = device.type + "_DepthModel_" + model_name + ".pth"
+    torch.save(model.state_dict(), model_path)
+    print(f"Succesfull saved model as {model_path}.")
 
     return model, [X, y, D], [X_test, y_test, D_test]
 
