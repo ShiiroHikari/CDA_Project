@@ -185,7 +185,7 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
     # Save the model
     model_path = device.type + "_DepthModel_" + model_name + ".pth"
     torch.save(model.state_dict(), model_path)
-    print(f"Succesfull saved model as {model_path}.")
+    print(f'Succesfull saved model as "{model_path}".')
 
     return model, [X, y, D], [X_test, y_test, D_test]
 
