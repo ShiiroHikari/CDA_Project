@@ -231,9 +231,9 @@ def extract_hilbert_envelope(signal):
 
 
 # Generate signal from delta_pP and delta_sP
-def generate_one_signal(plot=False):
+def generate_one_signal(plot=False, depth=None):
     # Generate arrival times
-    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=1)
+    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=1, depth=depth)
     delta_pP, delta_sP = deltas[0][0], deltas[0][1]
     
     # Generate diracs
@@ -312,7 +312,7 @@ def generate_one_signal(plot=False):
 # Reorganise stations based on the distance to the source
 def reorganise_distance(deltas, source, stations):
     """
-    Reorganize stations and deltas based on their distance to the source.
+    Reorganize stations and deltas based on their distance to the epicenter.
 
     Parameters:
         source (tuple): The source coordinates (lat, long, depth).
@@ -323,7 +323,7 @@ def reorganise_distance(deltas, source, stations):
         tuple: Reorganized stations and deltas sorted by distance from the source.
     """
     reorg_data = [
-        (data_generation.arrival_time.direct_distance(source[0], source[1], source[2], station[0], station[1], 0), station, delta)
+        (data_generation.arrival_time.direct_distance(source[0], source[1], 0, station[0], station[1], 0), station, delta)
         for station, delta in zip(stations, deltas)
     ]
     # Sort by distance
@@ -339,18 +339,19 @@ def reorganise_distance(deltas, source, stations):
     
     
 # Generate signal from delta_pP and delta_sP for multiple stations
-def generate_signals(num_stations=50):
+def generate_signals(num_stations=50, depth=None):
     """
     Generate signals for multiple stations given a single source.
     
     Parameters:
     - num_stations : number of stations to simulate (default is 50)
+    - depth : depth to simulate (default is None)
     
     Returns:
     - results : list of tuples (envelope, source, station) for each station
     """
     # Generate arrival times for multiple stations
-    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations)
+    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=num_stations, depth=depth)
 
     # Reorganize deltas and stations from distance to source
     deltas, stations, distances = reorganise_distance(deltas, source, stations)

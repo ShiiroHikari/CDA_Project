@@ -15,10 +15,11 @@ Vp = 8000               # vitesse onde P en m/s
 Vs = Vp / math.sqrt(3)  # vitesse onde S en m/s
 
 # Source coordinates
-def generate_coordinates():
+def generate_coordinates(depth=None):
     latitude = random.uniform(-90, 90)
     longitude = random.uniform(-180, 180)
-    depth = random.uniform(0, 100e3)
+    if depth is None:
+        depth = random.uniform(0, 100e3)
     return latitude, longitude, depth
 
 # Angular distance (surface)
@@ -86,8 +87,8 @@ def travel_times(lat1, lon1, dep1, lat2, lon2):
     return tP, tpP, tsP
 
 # Generate samples
-def generate_arrival_samples(num_stations=50):
-    source = generate_coordinates()
+def generate_arrival_samples(num_stations=50, depth=None):
+    source = generate_coordinates(depth=depth)
     deltas = []
     stations = []
     

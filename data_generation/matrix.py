@@ -14,19 +14,19 @@ import data_generation.signal
 
 
 # Generate one matrix
-def generate_matrix(num_stations=50):
+def generate_matrix(num_stations=50, depth=None):
     """
     Generates a matrix and depth associated.
     
     Parameters:
-    - num_entries : number of cases (different depths) to generate
     - num_stations : number of stations per depth
+    - depth : depth to simulate (default is None)
     
     Returns:
     - signal_matrix : matrix with one line per signal
     - depth : the depth corresponding to this matrix
     """
-    results, distances = data_generation.signal.generate_signals(num_stations=num_stations)
+    results, distances = data_generation.signal.generate_signals(num_stations=num_stations, depth=depth)
 
     # Get depth (same for all)
     depth = results[0][1][2] # from 1st sample
@@ -48,7 +48,7 @@ def normalize_distances(distances, min_distance, max_distance):
     """
     Min-Max scales distances using the theoretical range.
 
-    Args:
+    Parameters:
         distances : shape [batch_size, num_stations] distances in meters.
         min_distance : Theoretical minimum distance in meters.
         max_distance : Theoretical maximum distance in meters.
@@ -61,7 +61,7 @@ def normalize_distances(distances, min_distance, max_distance):
 
 
 # Generate multiple matrix for model training
-def dataset_generation(num_entries=1000, num_stations=50):
+def dataset_generation(num_entries=1000, num_stations=50, depth=None):
     """
     Generates a dataset containing signal matrices and their corresponding depths.
     
@@ -79,7 +79,7 @@ def dataset_generation(num_entries=1000, num_stations=50):
     
     for i in range(num_entries):
         # Generate signal matrix and depth
-        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations)
+        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations, depth=depth[i] if depth is not None else None)
         
         # Save matrix, depth and distances
         data_matrix.append(signal_matrix)

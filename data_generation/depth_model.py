@@ -43,7 +43,8 @@ class DepthModel(nn.Module):
         conv_out_features = 64 * num_stations * (signal_len // 8) 
         if include_distance:
             conv_out_features += num_stations
-            
+
+        self.dropout = nn.Dropout(p=0.2)
         self.fc1 = nn.Linear(conv_out_features, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, 128)
@@ -68,9 +69,13 @@ class DepthModel(nn.Module):
         
         # Fully connected layers
         x = F.relu(self.fc1(x))
+        x = self.dropout(x)
         x = F.relu(self.fc2(x))
+        x = self.dropout(x)
         x = F.relu(self.fc3(x))
+        x = self.dropout(x)
         x = F.relu(self.fc4(x))
+        x = self.dropout(x)
         x = self.fc_out(x)  # Final regression output (no activation)
         
         return x
@@ -111,7 +116,7 @@ def train_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance
 
     # Loss function and optimizer
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
     print("Succesfully set loss criterion and optimizer.")
     
     # Training
@@ -186,9 +191,17 @@ def train_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance
 
 
 
-def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", batch_size=32, num_stations=50, epochs=50, include_distance=True):
+def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth=None):
+    '''
+    Data should have the same parameters (num_stations, include_distance) as the model used.
+    
+    Parameters:
+    - num_stations : number of stations per event
+    - include_distance : use stations to epicenter distance to train the model
+    - depth : list of depth (m) to generate the data (should have num_entries length)
+    '''
     # Get a single matrix
-    X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations)
+    X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations, depth=depth)
 
     # Initialize the model (ensure parameters match the training setup)
     model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance)
