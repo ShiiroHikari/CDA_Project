@@ -303,6 +303,35 @@ def generate_one_signal(plot=False):
         plt.show()
         
     return envelope, source, stations
+
+
+
+# Reorganise stations based on the distance to the source
+def reorganise_distance(deltas, source, stations):
+    """
+    Reorganize stations and deltas based on their distance to the source.
+
+    Parameters:
+        source (tuple): The source coordinates (lat, long, depth).
+        stations (list): A list of station coordinates (lat, long).
+        deltas (list): A list of delta values corresponding to each station.
+
+    Returns:
+        tuple: Reorganized stations and deltas sorted by distance from the source.
+    """
+    distances = [
+        (data_generation.arrival_time.direct_distance(source[0], source[1], source[2], station[0], station[1], 0), station, delta)
+        for station, delta in zip(stations, deltas)
+    ]
+    # Sort by distance
+    distances.sort(key=lambda x: x[0])
+
+    # Extract sorted stations and deltas
+    sorted_stations = [item[1] for item in distances]
+    sorted_deltas = [item[2] for item in distances]
+
+    return sorted_deltas, sorted_stations
+
     
     
 # Generate signal from delta_pP and delta_sP for multiple stations
@@ -318,7 +347,11 @@ def generate_signals(num_stations=50):
     """
     # Generate arrival times for multiple stations
     deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations)
-    
+
+    # Reorganize deltas and stations from distance to source
+    deltas, stations = reorganise_distance(deltas, source, stations)
+
+    # Generate signals
     results = []
     
     for i, (delta_pP, delta_sP) in enumerate(deltas):
