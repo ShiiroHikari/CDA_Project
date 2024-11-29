@@ -61,13 +61,14 @@ def normalize_distances(distances, min_distance, max_distance):
 
 
 # Generate multiple matrix for model training
-def dataset_generation(num_entries=1000, num_stations=50, depth=None):
+def dataset_generation(num_entries=32, num_stations=50, depth_list=None):
     """
     Generates a dataset containing signal matrices and their corresponding depths.
     
     Parameters:
     - num_entries : number of cases (different depths) to generate
     - num_stations : number of stations per depth
+    - depth_list : list of depths to generate (should have num_entries size or None)
     
     Returns:
     - X : numpy array of shape (num_entries, 1, num_stations, X) (signal matrices)
@@ -79,7 +80,7 @@ def dataset_generation(num_entries=1000, num_stations=50, depth=None):
     
     for i in range(num_entries):
         # Generate signal matrix and depth
-        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations, depth=depth[i] if depth is not None else None)
+        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations, depth=depth_list[i] if depth_list is not None else None)
         
         # Save matrix, depth and distances
         data_matrix.append(signal_matrix)
