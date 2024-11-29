@@ -84,12 +84,15 @@ def run_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance=T
     X_test, y_test, D_test, _ = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
     print("Succesfully generated test dataset.")
 
-    dataset = TensorDataset(X, y, D)
-    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False) # No need to shuffle because it's randomized already
+    if include_distance:
+        dataset = TensorDataset(X, y, D)
+        test_dataset = TensorDataset(X_test, y_test, D_test)
+    else:
+        dataset = TensorDataset(X, y)
+        test_dataset = TensorDataset(X_test, y_test)
 
-    test_dataset = TensorDataset(X_test, y_test, D_test)
+    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
 
     # Initialize device and model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -115,8 +118,14 @@ def run_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance=T
         running_loss = 0.0
         
         for batch in train_loader:
-            X_signal, y_true, x_distance = batch
-            X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
+            if include_distance:
+                X_signal, y_true, x_distance = batch
+                X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
+                y_pred = model(X_signal, x_distance)
+            else:
+                X_signal, y_true = batch
+                X_signal, y_true = X_signal.to(device), y_true.to(device)
+                y_pred = model(X_signal)
     
             # Zero gradients
             optimizer.zero_grad()
@@ -146,8 +155,15 @@ def run_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance=T
     test_loss = 0.0
     
     with torch.no_grad():  # Disable gradient computation
-        for X_signal, y_true, x_distance in test_loader:
-            X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
+        for batch in test_loader:
+            if include_distance:
+                X_signal, y_true, x_distance = batch
+                X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
+                y_pred = model(X_signal, x_distance)
+            else:
+                X_signal, y_true = batch
+                X_signal, y_true = X_signal.to(device), y_true.to(device)
+                y_pred = model(X_signal)
     
             # Forward pass
             y_pred = model(X_signal, x_distance)
