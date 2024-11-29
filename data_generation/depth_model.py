@@ -6,6 +6,8 @@ Created on Fri Nov 29 18:08:04 2024
 @author: Basile Dupont
 """
 
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -76,7 +78,7 @@ class DepthModel(nn.Module):
 
 
 # Run the model (train and test)
-def run_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance=True):
+def train_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance=True):
     # Prepare train and test datasets
     X, y, D, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
     print("Succesfully generated train dataset.")
@@ -176,8 +178,61 @@ def run_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance=T
     print("Succesfull test.")
 
     # Save the model
-    # torch.save(model.state_dict(), "depth_model.pth")
+    model_name = device.type + "_DepthModel.pth"
+    torch.save(model.state_dict(), model_name)
+    print(f"Succesfull saved model as {model_name}.")
 
     return model, [X, y, D], [X_test, y_test, D_test]
+
+
+
+def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", batch_size=32, num_stations=50, epochs=50, include_distance=True):
+    # Get a single matrix
+    X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations)
+
+    # Initialize the model (ensure parameters match the training setup)
+    model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance)
+    
+    # Load the trained model weights
+    model.load_state_dict(torch.load(model_name, weights_only=True))
+    model.eval()  # Set the model to evaluation mode
+
+    # Use the same device as during training
+    device = torch.device(device_name)
+    model = model.to(device)
+    
+    X = X_cpu.to(device)
+    if include_distance:
+        D = D.to(device)
+    
+    # Get the predicted depth
+    with torch.no_grad():  # Disable gradient computation for inference
+        if include_distance:
+            predicted_depth = model(X, D)
+        else:
+            predicted_depth = model(X)
+
+    # Plot envelopes
+    image = X_cpu.squeeze(0).squeeze(0)  # Turn signals into 2D for mapping
+    
+    plt.figure(figsize=(10,7))
+    plt.imshow(image, aspect='auto', cmap='viridis', origin='upper')
+    
+    # Adjust x-axis to represent time in seconds
+    num_columns = len(image[0])  # Number of columns in the matrix
+    plt.xticks(
+        ticks=np.arange(0, num_columns, step=200),  # 200 step for 10s spacing
+        labels=np.arange(0, num_columns / 20, step=200 / 20)  # Convert to seconds (1/20 of a second since 20 Hz sampling)
+    )
+
+    plt.xlabel('Time (s)')
+    plt.ylabel('Signals (organized by distance)')
+    plt.title(f'Real Depth : {y.item()/1e3:.2f} km \nPredicted Depth : {predicted_depth.item()/1e3:.2f} km')
+    plt.tight_layout()
+    plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=16, fontweight='bold', y=1.02)  # Add suptitle with y offset
+    plt.show()
+
+    
+    
 
 
