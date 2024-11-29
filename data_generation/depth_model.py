@@ -191,7 +191,7 @@ def train_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance
 
 
 
-def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth=None):
+def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None):
     '''
     Data should have the same parameters (num_stations, include_distance) as the model used.
     
@@ -201,7 +201,7 @@ def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_sta
     - depth : list of depth (m) to generate the data (should have num_entries length)
     '''
     # Get a single matrix
-    X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations, depth=depth)
+    X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations, depth_list=depth_list)
 
     # Initialize the model (ensure parameters match the training setup)
     model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance)
