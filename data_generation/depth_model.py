@@ -191,7 +191,7 @@ def train_DepthModel(batch_size=32, num_stations=50, epochs=50, include_distance
 
 
 
-def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None):
+def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None, plot=False):
     '''
     Data should have the same parameters (num_stations, include_distance) as the model used.
     
@@ -225,25 +225,31 @@ def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_sta
         else:
             predicted_depth = model(X)
 
-    # Plot envelopes
-    image = X_cpu.squeeze(0).squeeze(0)  # Turn signals into 2D for mapping
+    if plot:
+        # Plot envelopes
+        image = X_cpu.squeeze(0).squeeze(0)  # Turn signals into 2D for mapping
+        
+        plt.figure(figsize=(10,7))
+        plt.imshow(image, aspect='auto', cmap='viridis', origin='upper')
+        
+        # Adjust x-axis to represent time in seconds
+        num_columns = len(image[0])  # Number of columns in the matrix
+        plt.xticks(
+            ticks=np.arange(0, num_columns, step=200),  # 200 step for 10s spacing
+            labels=np.arange(0, num_columns / 20, step=200 / 20)  # Convert to seconds (1/20 of a second since 20 Hz sampling)
+        )
     
-    plt.figure(figsize=(10,7))
-    plt.imshow(image, aspect='auto', cmap='viridis', origin='upper')
-    
-    # Adjust x-axis to represent time in seconds
-    num_columns = len(image[0])  # Number of columns in the matrix
-    plt.xticks(
-        ticks=np.arange(0, num_columns, step=200),  # 200 step for 10s spacing
-        labels=np.arange(0, num_columns / 20, step=200 / 20)  # Convert to seconds (1/20 of a second since 20 Hz sampling)
-    )
+        plt.xlabel('Time (s)')
+        plt.ylabel('Signals (organized by distance)')
+        plt.title(f'Real Depth : {y.item()/1e3:.2f} km \nPredicted Depth : {predicted_depth.item()/1e3:.2f} km')
+        plt.tight_layout()
+        plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=14, fontweight='bold', y=1.02)  # Add suptitle with y offset
+        plt.show()
 
-    plt.xlabel('Time (s)')
-    plt.ylabel('Signals (organized by distance)')
-    plt.title(f'Real Depth : {y.item()/1e3:.2f} km \nPredicted Depth : {predicted_depth.item()/1e3:.2f} km')
-    plt.tight_layout()
-    plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=16, fontweight='bold', y=1.02)  # Add suptitle with y offset
-    plt.show()
+    # Get missvalue
+    delta_depth = predicted_depth.item() - y.item()
+
+    return delta_depth
 
     
     
