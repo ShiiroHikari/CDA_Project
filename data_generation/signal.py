@@ -251,6 +251,9 @@ def generate_one_signal(plot=False):
     # Get Hilbert enveloppe
     envelope = extract_hilbert_envelope(filtered_signal)
 
+    # Decimate the envelope to 20 Hz
+    envelope = decimate(envelope, q=5, zero_phase=True)
+
     if plot is True:
         plt.figure(figsize=(15, 15))
 
@@ -371,8 +374,8 @@ def generate_signals(num_stations=50):
         # Get Hilbert envelope
         envelope = extract_hilbert_envelope(filtered_signal)
 
-        # Decimate the envelope to 50 Hz
-        envelope = decimate(envelope, q=2, zero_phase=True)
+        # Decimate the envelope to 20 Hz
+        envelope = decimate(envelope, q=5, zero_phase=True)
         
         # Append results for this station
         results.append((envelope, source, stations[i]))

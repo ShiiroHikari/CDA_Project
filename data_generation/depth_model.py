@@ -22,23 +22,23 @@ class DepthModel(nn.Module):
         self.include_distance = include_distance
         
         # Convolutional layers for seismic signals
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(1, 3), padding=(0, 1))
-        self.bn1 = nn.BatchNorm2d(32)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(1, 3), padding=(0, 1))
+        self.bn1 = nn.BatchNorm2d(16)
         self.pool1 = nn.MaxPool2d(kernel_size=(1, 2))
         
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(1, 3), padding=(0, 1))
-        self.bn2 = nn.BatchNorm2d(64)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(1, 3), padding=(0, 1))
+        self.bn2 = nn.BatchNorm2d(32)
         self.pool2 = nn.MaxPool2d(kernel_size=(1, 2))
         
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(1, 3), padding=(0, 1))
-        self.bn3 = nn.BatchNorm2d(128)
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(1, 3), padding=(0, 1))
+        self.bn3 = nn.BatchNorm2d(64)
         self.pool3 = nn.MaxPool2d(kernel_size=(1, 2))
         
         # Flatten the output
         self.flatten = nn.Flatten()
         
         # Fully connected layers
-        conv_out_features = 128 * num_stations * (signal_len // 8) 
+        conv_out_features = 64 * num_stations * (signal_len // 8) 
         if include_distance:
             conv_out_features += num_stations
             
