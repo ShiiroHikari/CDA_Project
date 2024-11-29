@@ -27,7 +27,6 @@ def generate_diracs(delta_pP, delta_sP, source, station, dt=0.01, duration=60, t
     - duration: total signal duration (in seconds)
     - tau: time constant for exponential decay (in seconds)
     - coda_duration: maximum duration of the tail (in seconds)
-    - flip_probability: probability of flipping the sign in the coda
     
     Returns:
     - signal: array containing the signal
@@ -42,17 +41,21 @@ def generate_diracs(delta_pP, delta_sP, source, station, dt=0.01, duration=60, t
     time = np.arange(0, duration, dt)
     signal = np.zeros_like(time)
     
-    # Function to add an exponential tail as Diracs with random flips
+    # Function to add an exponential tail as Diracs with controlled sign flips
     def add_coda_diracs(signal, start_index, amplitude, initial_sign):
-        sign = initial_sign
-        for i in range(1, int(coda_duration / dt)):
-            index = start_index + i
+        dt_factor = 10  # Controls spacing between two diracs ; 0.1s
+        sign = initial_sign  # Start with the initial sign
+        for i in range(1, int(coda_duration / (dt_factor * dt))):  # Adjust iteration
+            index = start_index + i * dt_factor
             if index >= len(signal):  # If exceeding signal duration
                 break
                 
-            # Randomly flip the sign
-            sign = random.choice([-1, 1])
-            signal[index] += sign * amplitude * np.exp(-i * dt / tau)
+            # 10% chance to flip the sign
+            if random.random() < 0.1:
+                sign *= -1  # Flip the sign
+                
+            # Add the Dirac to the signal
+            signal[index] += sign * amplitude * np.exp(-i * dt_factor * dt / tau)
     
     # Amplitude and radiation (random sign) of the P wave
     amplitude_P = random.uniform(0.5, 1.0)  # Amplitude between 0.5 and 1
@@ -60,7 +63,7 @@ def generate_diracs(delta_pP, delta_sP, source, station, dt=0.01, duration=60, t
     signal[0] = sign_P * amplitude_P  # Simulate P-wave dirac
     add_coda_diracs(signal, 0, amplitude_P, sign_P)  # Add tail to simulate exponential energy decrease
     
-    # Position of Diracs and tails
+    # Position of first Dirac before tail
     pP_index = int(delta_pP / dt)
     sP_index = int(delta_sP / dt)
     
