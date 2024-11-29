@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 import math
-from scipy.signal import butter, filtfilt, hilbert
+from scipy.signal import butter, filtfilt, hilbert, decimate
 import data_generation.arrival_time
 
 # Generate signal with discrete exponential tails and random radiation in the coda
@@ -319,18 +319,19 @@ def reorganise_distance(deltas, source, stations):
     Returns:
         tuple: Reorganized stations and deltas sorted by distance from the source.
     """
-    distances = [
+    reorg_data = [
         (data_generation.arrival_time.direct_distance(source[0], source[1], source[2], station[0], station[1], 0), station, delta)
         for station, delta in zip(stations, deltas)
     ]
     # Sort by distance
-    distances.sort(key=lambda x: x[0])
+    reorg_data.sort(key=lambda x: x[0])
 
-    # Extract sorted stations and deltas
-    sorted_stations = [item[1] for item in distances]
-    sorted_deltas = [item[2] for item in distances]
+    # Extract sorted stations, distances and deltas
+    sorted_stations = [item[1] for item in reorg_data]
+    sorted_distances = [item[0] for item in reorg_data]
+    sorted_deltas = [item[2] for item in reorg_data]
 
-    return sorted_deltas, sorted_stations
+    return sorted_deltas, sorted_stations, sorted_distances
 
     
     
@@ -349,7 +350,7 @@ def generate_signals(num_stations=50):
     deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations)
 
     # Reorganize deltas and stations from distance to source
-    deltas, stations = reorganise_distance(deltas, source, stations)
+    deltas, stations, distances = reorganise_distance(deltas, source, stations)
 
     # Generate signals
     results = []
@@ -369,26 +370,12 @@ def generate_signals(num_stations=50):
         
         # Get Hilbert envelope
         envelope = extract_hilbert_envelope(filtered_signal)
+
+        # Decimate the envelope to 50 Hz
+        envelope = decimate(envelope, q=2, zero_phase=True)
         
         # Append results for this station
         results.append((envelope, source, stations[i]))
     
-    return results
+    return results, distances
 
-
-def generate_matrix(num_stations=50):
-    results = generate_signals(num_stations=num_stations)
-
-    # Get depth (same for all)
-    depth = results[0][1][2]
-
-    # Initialize signal matrix
-    num_samples = len(results[0][0])  # Number of points per signal
-    signal_matrix = np.zeros((num_stations, num_samples))
-    
-    # Build signal matrix
-    for i, (envelope, source, station) in enumerate(results):
-        # Add normalized envelope to matrix
-        signal_matrix[i, :] = envelope
-
-    return signal_matrix, depth
