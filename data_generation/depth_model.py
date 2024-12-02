@@ -191,7 +191,7 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
 
 
 
-def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None, plot=False):
+def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None, plot=False, save_plot=False):
     '''
     Data should have the same parameters (num_stations, include_distance) as the model used.
     
@@ -244,6 +244,10 @@ def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_sta
         plt.title(f'Real Depth : {y.item()/1e3:.2f} km \nPredicted Depth : {predicted_depth.item()/1e3:.2f} km')
         plt.tight_layout()
         plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=14, fontweight='bold', y=1.02)  # Add suptitle with y offset
+
+        if save_plot:
+            plt.savefig(f'figures/{model_name}_comparison.png')
+        
         plt.show()
 
     # Get missvalue
