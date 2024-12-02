@@ -255,7 +255,7 @@ def generate_one_signal(plot=False, depth=None):
     envelope = decimate(envelope, q=5, zero_phase=True)
 
     if plot is True:
-        plt.figure(figsize=(15, 15))
+        plt.figure(figsize=(15, 8))
 
         plt.subplot(511)
         plt.stem(time, diracs, markerfmt=' ', basefmt=' ')
@@ -294,7 +294,8 @@ def generate_one_signal(plot=False, depth=None):
         plt.grid()
 
         plt.subplot(515)
-        plt.plot(time, envelope)
+        time_envelope = np.arange(0, 60, 1/20)
+        plt.plot(time_envelope, envelope)
         plt.vlines(delta_pP, min(envelope), max(envelope), color='r')
         plt.vlines(delta_sP, min(envelope), max(envelope), color='r')
         plt.title("Normalized Hilbert envelope")
