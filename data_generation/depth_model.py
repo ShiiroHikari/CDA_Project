@@ -246,7 +246,7 @@ def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_sta
         plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=14, fontweight='bold', y=1.02)  # Add suptitle with y offset
 
         if save_plot:
-            plt.savefig(f'figures/{model_name}_comparison.png')
+            plt.savefig(f'figures/{model_name}_comparison.png', bbox_inches='tight')
         
         plt.show()
 
