@@ -83,23 +83,29 @@ class DepthModel(nn.Module):
 
 
 
-# Run the model (train and test)
+# Run the model (train, validation and test)
 def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, include_distance=True):
-    # Prepare train and test datasets
-    X, y, D, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
-    print("Succesfully generated train dataset.")
+    # Prepare train, validation, and test datasets
+    X_train, y_train, D_train, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
+    print("Successfully generated train dataset.")
+    
+    X_val, y_val, D_val, _ = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
+    print("Successfully generated validation dataset.")
     
     X_test, y_test, D_test, _ = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
-    print("Succesfully generated test dataset.")
+    print("Successfully generated test dataset.")
 
     if include_distance:
-        dataset = TensorDataset(X, y, D)
+        train_dataset = TensorDataset(X_train, y_train, D_train)
+        val_dataset = TensorDataset(X_val, y_val, D_val)
         test_dataset = TensorDataset(X_test, y_test, D_test)
     else:
-        dataset = TensorDataset(X, y)
+        train_dataset = TensorDataset(X_train, y_train)
+        val_dataset = TensorDataset(X_val, y_val)
         test_dataset = TensorDataset(X_test, y_test)
 
-    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     # Initialize device and model
@@ -107,21 +113,20 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
 
     # Warn user if the device is CPU
     if device.type == "cpu":
-        confirm = input("CUDA is not available. The model will run on the CPU, which may be slow. Do you want to continue? (Y/N): ").strip().lower()
-        if confirm != "Y":
-            print("User declined to proceed on CPU.")
-            return None, [X, y, D], [X_test, y_test, D_test]
+        print("CUDA is not available.")
+        return None, None, None, None
     
     model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
-    print(f"Succesfully initialized model using {device}.")
+    print(f"Successfully initialized model using {device}.")
 
     # Loss function and optimizer
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
-    print("Succesfully set loss criterion and optimizer.")
+    print("Successfully set loss criterion and optimizer.")
     
     # Training
     train_losses = []
+    val_losses = []
 
     for epoch in tqdm(range(epochs), desc="Training Epochs", mininterval=1):
         model.train()  # Set model to training mode
@@ -131,17 +136,15 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
             if include_distance:
                 X_signal, y_true, x_distance = batch
                 X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
-                y_pred = model(X_signal, x_distance)
             else:
                 X_signal, y_true = batch
                 X_signal, y_true = X_signal.to(device), y_true.to(device)
-                y_pred = model(X_signal)
     
             # Zero gradients
             optimizer.zero_grad()
     
             # Forward pass
-            y_pred = model(X_signal, x_distance)
+            y_pred = model(X_signal, x_distance if include_distance else None)
     
             # Compute loss
             loss = criterion(y_pred, y_true)
@@ -157,31 +160,50 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
         mean_loss = running_loss / len(train_loader)
         train_losses.append(mean_loss)
 
-    print("Succesfull train.")
-
-    # Evaluation
-    model.eval()  # Set model to evaluation mode
-    test_loss = 0.0
+        # Validation
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for batch in val_loader:
+                if include_distance:
+                    X_signal, y_true, x_distance = batch
+                    X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
+                else:
+                    X_signal, y_true = batch
+                    X_signal, y_true = X_signal.to(device), y_true.to(device)
     
-    with torch.no_grad():  # Disable gradient computation
+                # Forward pass
+                y_pred = model(X_signal, x_distance if include_distance else None)
+    
+                # Compute validation loss
+                loss = criterion(y_pred, y_true)
+                val_loss += loss.item()
+
+        val_loss /= len(val_loader)
+        val_losses.append(val_loss)
+
+    print("Successfully trained model.")
+
+    # Test evaluation
+    model.eval()
+    test_loss = 0.0
+    with torch.no_grad():
         for batch in test_loader:
             if include_distance:
                 X_signal, y_true, x_distance = batch
                 X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
-                y_pred = model(X_signal, x_distance)
             else:
                 X_signal, y_true = batch
                 X_signal, y_true = X_signal.to(device), y_true.to(device)
-                y_pred = model(X_signal)
     
             # Forward pass
-            y_pred = model(X_signal, x_distance)
+            y_pred = model(X_signal, x_distance if include_distance else None)
     
-            # Compute loss
+            # Compute test loss
             loss = criterion(y_pred, y_true)
             test_loss += loss.item()
-    
-    print("Succesfull test.")
+
+    test_loss /= len(test_loader)
 
     # Save the model
     model_path_name = device.type + "_DepthModel_" + model_name
@@ -189,7 +211,8 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
     torch.save(model.state_dict(), 'models/' + model_path)
     print(f'Saved model as "{model_path}".')
 
-    return model_path_name, train_losses, test_loss
+    return model_path_name, train_losses, val_losses, test_loss
+
 
 
 
