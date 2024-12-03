@@ -8,6 +8,7 @@ Created on Fri Nov 29 18:08:04 2024
 
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm.notebook import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -120,10 +121,12 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
     print("Succesfully set loss criterion and optimizer.")
     
     # Training
-    for epoch in range(epochs):
+    train_losses = []
+
+    for epoch in tqdm(range(epochs), desc="Training Epochs", mininterval=1):
         model.train()  # Set model to training mode
         running_loss = 0.0
-        
+    
         for batch in train_loader:
             if include_distance:
                 X_signal, y_true, x_distance = batch
@@ -146,16 +149,15 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
             # Backward pass and optimize
             loss.backward()
             optimizer.step()
-            
+    
             # Accumulate loss for reporting
             running_loss += loss.item()
-    
-        print(f"Epoch {epoch+1}/{epochs}, Mean Loss: {running_loss / len(train_loader):.4f}")
 
-    print("Succesfull training.")
-    
-    # Vspace between training and evaluation
-    print("\n \n \n")
+        # Calculate mean loss for this epoch
+        mean_loss = running_loss / len(train_loader)
+        train_losses.append(mean_loss)
+
+    print("Succesfull train.")
 
     # Evaluation
     model.eval()  # Set model to evaluation mode
@@ -179,19 +181,19 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
             loss = criterion(y_pred, y_true)
             test_loss += loss.item()
     
-    print(f"Mean Test Loss: {test_loss / len(test_loader):.4f}")
     print("Succesfull test.")
 
     # Save the model
-    model_path = device.type + "_DepthModel_" + model_name + ".pth"
-    torch.save(model.state_dict(), model_path)
-    print(f'Succesfull saved model as "{model_path}".')
+    model_path_name = device.type + "_DepthModel_" + model_name
+    model_path = model_path_name + ".pth"
+    torch.save(model.state_dict(), 'models/' + model_path)
+    print(f'Saved model as "{model_path}".')
 
-    return model, [X, y, D], [X_test, y_test, D_test]
+    return model_path_name, train_losses, test_loss
 
 
 
-def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None, plot=False, save_plot=False):
+def run_DepthModel(model_path="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None, plot=False, save_plot=False):
     '''
     Data should have the same parameters (num_stations, include_distance) as the model used.
     
@@ -207,7 +209,7 @@ def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_sta
     model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance)
     
     # Load the trained model weights
-    model.load_state_dict(torch.load(model_name, weights_only=True))
+    model.load_state_dict(torch.load('models/' + model_path, weights_only=True))
     model.eval()  # Set the model to evaluation mode
 
     # Use the same device as during training
@@ -246,7 +248,7 @@ def run_DepthModel(model_name="cuda_DepthModel.pth", device_name="cuda", num_sta
         plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=14, fontweight='bold', y=1.02)  # Add suptitle with y offset
 
         if save_plot:
-            plt.savefig(f'figures/{model_name}_comparison.png', bbox_inches='tight')
+            plt.savefig(f'figures/{model_path}_comparison.png', bbox_inches='tight')
         
         plt.show()
 
