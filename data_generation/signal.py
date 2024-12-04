@@ -340,13 +340,14 @@ def reorganise_distance(deltas, source, stations):
     
     
 # Generate signal from delta_pP and delta_sP for multiple stations
-def generate_signals(num_stations=50, depth=None):
+def generate_signals(num_stations=50, depth=None, rand_inactive=0):
     """
     Generate signals for multiple stations given a single source.
     
     Parameters:
     - num_stations : number of stations to simulate (default is 50)
     - depth : depth to simulate (default is None)
+    - rand_inactive : max number of inactive stations
     
     Returns:
     - results : list of tuples (envelope, source, station) for each station
@@ -357,30 +358,38 @@ def generate_signals(num_stations=50, depth=None):
     # Reorganize deltas and stations from distance to source
     deltas, stations, distances = reorganise_distance(deltas, source, stations)
 
+    # Randomly determine the number of active stations (from 20 to num_stations)
+    active_stations = num_stations - random.randint(0, rand_inactive)
+
     # Generate signals
     results = []
     
     for i, (delta_pP, delta_sP) in enumerate(deltas):
-        # Generate diracs
-        diracs, time = generate_diracs(delta_pP, delta_sP, source, stations[i])
-        
-        # Generate signal
-        signal = convolve_signal_with_wavelet(diracs, time)
-        
-        # Add noise
-        noisy_signal, snr_db = add_white_noise(signal)
-        
-        # Filter signal
-        filtered_signal = bandpass_filter(noisy_signal)
-        
-        # Get Hilbert envelope
-        envelope = extract_hilbert_envelope(filtered_signal)
+        if i < active_stations:
+            # Generate diracs
+            diracs, time = generate_diracs(delta_pP, delta_sP, source, stations[i])
+            
+            # Generate signal
+            signal = convolve_signal_with_wavelet(diracs, time)
+            
+            # Add noise
+            noisy_signal, snr_db = add_white_noise(signal)
+            
+            # Filter signal
+            filtered_signal = bandpass_filter(noisy_signal)
+            
+            # Get Hilbert envelope
+            envelope = extract_hilbert_envelope(filtered_signal)
+    
+            # Decimate the envelope to 20 Hz
+            envelope = decimate(envelope, q=5, zero_phase=True)
+            
+            # Append results for this station
+            results.append((envelope, source, stations[i]))
 
-        # Decimate the envelope to 20 Hz
-        envelope = decimate(envelope, q=5, zero_phase=True)
-        
-        # Append results for this station
-        results.append((envelope, source, stations[i]))
+        else:
+            # Add zero signals for inactive stations, with no data on source and station
+            results.append((np.zeros(1200), [0,0,0], [0,0]))  # 1200 points for 60s at 20 Hz
     
     return results, distances
 

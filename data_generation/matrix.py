@@ -14,19 +14,20 @@ import data_generation.signal
 
 
 # Generate one matrix
-def generate_matrix(num_stations=50, depth=None):
+def generate_matrix(num_stations=50, depth=None, rand_inactive=0):
     """
     Generates a matrix and depth associated.
     
     Parameters:
     - num_stations : number of stations per depth
     - depth : depth to simulate (default is None)
+    - rand_inactive : max number of inactive stations
     
     Returns:
     - signal_matrix : matrix with one line per signal
     - depth : the depth corresponding to this matrix
     """
-    results, distances = data_generation.signal.generate_signals(num_stations=num_stations, depth=depth)
+    results, distances = data_generation.signal.generate_signals(num_stations=num_stations, depth=depth, rand_inactive=rand_inactive)
 
     # Get depth (same for all)
     depth = results[0][1][2] # from 1st sample
@@ -49,19 +50,19 @@ def normalize_distances(distances, min_distance, max_distance):
     Min-Max scales distances using the theoretical range.
 
     Parameters:
-        distances : shape [batch_size, num_stations] distances in meters.
-        min_distance : Theoretical minimum distance in meters.
-        max_distance : Theoretical maximum distance in meters.
+    - distances : shape [batch_size, num_stations] distances in meters.
+    - min_distance : Theoretical minimum distance in meters.
+    - max_distance : Theoretical maximum distance in meters.
 
     Returns:
-        Min-max scaled distances, shape [batch_size, num_stations]
+    - Min-max scaled distances, shape [batch_size, num_stations]
     """
     return (distances - min_distance) / (max_distance - min_distance)
 
 
 
 # Generate multiple matrix for model training
-def dataset_generation(num_entries=32, num_stations=50, depth_list=None):
+def dataset_generation(num_entries=32, num_stations=50, depth_list=None, rand_inactive=0):
     """
     Generates a dataset containing signal matrices and their corresponding depths.
     
@@ -69,6 +70,7 @@ def dataset_generation(num_entries=32, num_stations=50, depth_list=None):
     - num_entries : number of cases (different depths) to generate
     - num_stations : number of stations per depth
     - depth_list : list of depths to generate (should have num_entries size or None)
+    - rand_inactive : max number of inactive stations
     
     Returns:
     - X : numpy array of shape (num_entries, 1, num_stations, X) (signal matrices)
@@ -80,7 +82,7 @@ def dataset_generation(num_entries=32, num_stations=50, depth_list=None):
     
     for i in range(num_entries):
         # Generate signal matrix and depth
-        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations, depth=depth_list[i] if depth_list is not None else None)
+        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations, depth=depth_list[i] if depth_list is not None else None, rand_inactive=rand_inactive)
         
         # Save matrix, depth and distances
         data_matrix.append(signal_matrix)
