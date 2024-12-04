@@ -47,17 +47,24 @@ def generate_matrix(num_stations=50, depth=None, rand_inactive=0):
 # Normalize distances
 def normalize_distances(distances, min_distance, max_distance):
     """
-    Min-Max scales distances using the theoretical range.
+    Normalizes distances using min-max scaling, with 0 values (inactive stations) set to -1.
 
     Parameters:
-    - distances : shape [batch_size, num_stations] distances in meters.
-    - min_distance : Theoretical minimum distance in meters.
-    - max_distance : Theoretical maximum distance in meters.
+    - distances : array of shape [batch_size, num_stations], distances in meters.
+                  Inactive stations must be marked as 0.
+    - min_distance : Theoretical minimum distance in meters (default is 2.5e6).
+    - max_distance : Theoretical maximum distance in meters (default is 1e7).
 
     Returns:
-    - Min-max scaled distances, shape [batch_size, num_stations]
+    - Normalized distances of shape [batch_size, num_stations], with inactive stations set to -1.
     """
-    return (distances - min_distance) / (max_distance - min_distance)
+    # Min-max scaling for positive distances (active stations)
+    normalized = (distances - min_distance) / (max_distance - min_distance)
+    
+    # Replace inactive stations (originally 0) with -1
+    normalized[distances == 0] = -1
+    
+    return normalized
 
 
 

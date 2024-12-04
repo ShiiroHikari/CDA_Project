@@ -84,15 +84,15 @@ class DepthModel(nn.Module):
 
 
 # Run the model (train, validation and test)
-def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, include_distance=True):
+def train_DepthModel(model_name, batch_size=32, num_stations=50, rand_inactive=0, epochs=50, include_distance=True):
     # Prepare train, validation, and test datasets
-    X_train, y_train, D_train, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
+    X_train, y_train, D_train, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations, rand_inactive=rand_inactive)
     print("Successfully generated train dataset.")
     
-    X_val, y_val, D_val, _ = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
+    X_val, y_val, D_val, _ = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations, rand_inactive=rand_inactive)
     print("Successfully generated validation dataset.")
     
-    X_test, y_test, D_test, _ = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations)
+    X_test, y_test, D_test, _ = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations, rand_inactive=rand_inactive)
     print("Successfully generated test dataset.")
 
     if include_distance:
@@ -216,7 +216,7 @@ def train_DepthModel(model_name, batch_size=32, num_stations=50, epochs=50, incl
 
 
 
-def run_DepthModel(model_path="cuda_DepthModel.pth", device_name="cuda", num_stations=50, include_distance=True, depth_list=None, plot=False, save_plot=False):
+def run_DepthModel(model_path="cuda_DepthModel.pth", device_name="cuda", num_stations=50, rand_inactive=0, include_distance=True, depth_list=None, plot=False, save_plot=False):
     '''
     Data should have the same parameters (num_stations, include_distance) as the model used.
     
@@ -226,7 +226,7 @@ def run_DepthModel(model_path="cuda_DepthModel.pth", device_name="cuda", num_sta
     - depth : list of depth (m) to generate the data (should have num_entries length)
     '''
     # Get a single matrix
-    X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations, depth_list=depth_list)
+    X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations, depth_list=depth_list, rand_inactive=rand_inactive)
 
     # Initialize the model (ensure parameters match the training setup)
     model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance)
