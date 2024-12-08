@@ -123,8 +123,8 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
         test_dataset = TensorDataset(X_test, y_test)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
 
     # Initialize device and model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
