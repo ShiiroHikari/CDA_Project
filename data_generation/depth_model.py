@@ -25,26 +25,27 @@ class DepthModel(nn.Module):
         self.include_distance = include_distance
         
         # Convolutional layers for seismic signals
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(1, 3), padding=(0, 1))
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3, 3), padding=(1, 1))
         self.bn1 = nn.BatchNorm2d(16)
-        self.pool1 = nn.MaxPool2d(kernel_size=(1, 2))
+        self.pool1 = nn.MaxPool2d(kernel_size=(2, 1))
         
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(1, 3), padding=(0, 1))
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=(1, 1))
         self.bn2 = nn.BatchNorm2d(32)
-        self.pool2 = nn.MaxPool2d(kernel_size=(1, 2))
+        self.pool2 = nn.MaxPool2d(kernel_size=(2, 1))
         
-        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(1, 3), padding=(0, 1))
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), padding=(1, 1))
         self.bn3 = nn.BatchNorm2d(64)
-        self.pool3 = nn.MaxPool2d(kernel_size=(1, 2))
+        self.pool3 = nn.MaxPool2d(kernel_size=(2, 1))
         
         # Flatten the output
         self.flatten = nn.Flatten()
         
-        # Fully connected layers
-        conv_out_features = 64 * num_stations * (signal_len // 8) 
+        # Dynamically calculate conv_out_features
+        conv_out_features = self.calculate_conv_out_features(signal_len, num_stations)
         if include_distance:
             conv_out_features += num_stations
 
+        # Fully connected layers
         self.dropout = nn.Dropout(p=0.2)
         self.fc1 = nn.Linear(conv_out_features, 512)
         self.fc2 = nn.Linear(512, 256)
@@ -52,6 +53,22 @@ class DepthModel(nn.Module):
         self.fc4 = nn.Linear(128, 64)
         self.fc_out = nn.Linear(64, 1)  # Single output for depth
         
+    def calculate_conv_out_features(self, signal_len, num_stations):
+        """
+        Perform a forward pass with dummy data to calculate the flattened output size.
+        """
+        with torch.no_grad():
+            # Create dummy input with the appropriate shape
+            x_dummy = torch.zeros(1, 1, num_stations, signal_len)  # (batch_size, channels, height, width)
+            
+            # Pass through the convolutional layers
+            x = self.pool1(F.relu(self.bn1(self.conv1(x_dummy))))
+            x = self.pool2(F.relu(self.bn2(self.conv2(x))))
+            x = self.pool3(F.relu(self.bn3(self.conv3(x))))
+            
+            # Flatten and calculate size
+            return x.view(1, -1).size(1)
+    
     def forward(self, x_signal, x_distance=None):
         # Signal processing through convolutional layers
         x = F.relu(self.bn1(self.conv1(x_signal)))
@@ -83,8 +100,9 @@ class DepthModel(nn.Module):
 
 
 
+
 # Run the model (train, validation and test)
-def train_DepthModel(model_name, batch_size=32, num_stations=50, rand_inactive=0, epochs=50, include_distance=True):
+def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0, epochs=100, include_distance=True):
     # Prepare train, validation, and test datasets
     X_train, y_train, D_train, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations, rand_inactive=rand_inactive)
     print("Successfully generated train dataset.")
@@ -280,7 +298,8 @@ def run_DepthModel(model_path="cuda_DepthModel.pth", device_name="cuda", num_sta
 
     return delta_depth
 
-    
+
+
     
 
 
