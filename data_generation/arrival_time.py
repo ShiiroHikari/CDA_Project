@@ -8,7 +8,13 @@ Created on Sat Nov 19 15:20:37 2024
 
 import math
 import random
+from obspy.taup import TauPyModel
+from obspy.geodetics import locations2degrees
 
+# Set model if using TauP
+TauP_model = TauPyModel(model="ak135")  # use Kennett 2005 propagation model
+
+# If not using TauP
 # Earth parameters
 R_Earth = 6371e3
 Vp = 8000               # vitesse onde P en m/s
@@ -87,15 +93,37 @@ def travel_times(lat1, lon1, dep1, lat2, lon2):
     return tP, tpP, tsP
 
 # Generate samples
-def generate_arrival_samples(num_stations=50, depth=None):
+def generate_arrival_samples(num_stations=50, depth=None, use_TauP=False):
     source = generate_coordinates(depth=depth)
     deltas = []
     stations = []
     
     for _ in range(num_stations):
+        # Generate station
         station = generate_station(source[0], source[1])
-        tP, tpP, tsP = travel_times(*source, station[0], station[1])
-        delta_pP, delta_sP = tpP - tP, tsP - tP
+        
+        if use_TauP:
+            distance_deg = locations2degrees(lat1=source[0],
+                                             long1=source[1],
+                                             lat2=station[0],
+                                             long2=station[1]
+                                            )
+    
+            arrivals = TauP_model.get_travel_times(source_depth_in_km=source[2]/1e3,
+                                              distance_in_degree=distance_deg,
+                                              phase_list=["P", "pP", "sP"]
+                                             )
+
+            if source[2] == 0:  # if source is at depth 0, no pP or sP so delta is 0
+                delta_pP, delta_sP = 0, 0
+            else:
+                delta_pP = arrivals[1].time - arrivals[0].time
+                delta_sP = arrivals[2].time - arrivals[0].time
+            
+        else:
+            tP, tpP, tsP = travel_times(*source, station[0], station[1])
+            delta_pP, delta_sP = tpP - tP, tsP - tP
+            
         deltas.append((delta_pP, delta_sP))
         stations.append(station)
     

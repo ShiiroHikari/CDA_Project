@@ -14,7 +14,7 @@ import data_generation.signal
 
 
 # Generate one matrix
-def generate_matrix(num_stations=50, depth=None, rand_inactive=0):
+def generate_matrix(num_stations=50, depth=None, rand_inactive=0, use_TauP=False):
     """
     Generates a matrix and depth associated.
     
@@ -22,12 +22,13 @@ def generate_matrix(num_stations=50, depth=None, rand_inactive=0):
     - num_stations : number of stations per depth
     - depth : depth to simulate (default is None)
     - rand_inactive : max number of inactive stations
+    - use_TauP : whether to use or not TauP model for propagation
     
     Returns:
     - signal_matrix : matrix with one line per signal
     - depth : the depth corresponding to this matrix
     """
-    results, distances = data_generation.signal.generate_signals(num_stations=num_stations, depth=depth, rand_inactive=rand_inactive)
+    results, distances = data_generation.signal.generate_signals(num_stations=num_stations, depth=depth, rand_inactive=rand_inactive, use_TauP=use_TauP)
 
     # Get depth (same for all)
     depth = results[0][1][2] # from 1st sample
@@ -69,7 +70,7 @@ def normalize_distances(distances, min_distance, max_distance):
 
 
 # Generate multiple matrix for model training
-def dataset_generation(num_entries=32, num_stations=50, depth_list=None, rand_inactive=0):
+def dataset_generation(num_entries=32, num_stations=50, depth_list=None, rand_inactive=0, use_TauP=False):
     """
     Generates a dataset containing signal matrices and their corresponding depths.
     
@@ -78,6 +79,7 @@ def dataset_generation(num_entries=32, num_stations=50, depth_list=None, rand_in
     - num_stations : number of stations per depth
     - depth_list : list of depths to generate (should have num_entries size or None)
     - rand_inactive : max number of inactive stations
+    - use_TauP : whether to use or not TauP model for propagation
     
     Returns:
     - X : numpy array of shape (num_entries, 1, num_stations, X) (signal matrices)
@@ -89,7 +91,7 @@ def dataset_generation(num_entries=32, num_stations=50, depth_list=None, rand_in
     
     for i in range(num_entries):
         # Generate signal matrix and depth
-        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations, depth=depth_list[i] if depth_list is not None else None, rand_inactive=rand_inactive)
+        signal_matrix, depth, distances = generate_matrix(num_stations=num_stations, depth=depth_list[i] if depth_list is not None else None, rand_inactive=rand_inactive, use_TauP=use_TauP)
         
         # Save matrix, depth and distances
         data_matrix.append(signal_matrix)

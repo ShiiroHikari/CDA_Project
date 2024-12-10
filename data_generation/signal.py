@@ -231,9 +231,9 @@ def extract_hilbert_envelope(signal):
 
 
 # Generate signal from delta_pP and delta_sP
-def generate_one_signal(plot=False, depth=None):
+def generate_one_signal(plot=False, depth=None, use_TauP=False):
     # Generate arrival times
-    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=1, depth=depth)
+    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=1, depth=depth, use_TauP=use_TauP)
     delta_pP, delta_sP = deltas[0][0], deltas[0][1]
     
     # Generate diracs
@@ -340,7 +340,7 @@ def reorganise_distance(deltas, source, stations):
     
     
 # Generate signal from delta_pP and delta_sP for multiple stations
-def generate_signals(num_stations=50, depth=None, rand_inactive=0):
+def generate_signals(num_stations=50, depth=None, rand_inactive=0, use_TauP=False):
     """
     Generate signals for multiple stations given a single source.
     
@@ -348,12 +348,13 @@ def generate_signals(num_stations=50, depth=None, rand_inactive=0):
     - num_stations : number of stations to simulate (default is 50)
     - depth : depth to simulate (default is None)
     - rand_inactive : max number of inactive stations
+    - use_TauP : whether to use or not TauP model for propagation
     
     Returns:
     - results : list of tuples (envelope, source, station) for each station
     """
     # Generate arrival times for multiple stations
-    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=num_stations, depth=depth)
+    deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=num_stations, depth=depth, use_TauP=use_TauP)
 
     # Reorganize deltas and stations from distance to source
     deltas, stations, distances = reorganise_distance(deltas, source, stations)
