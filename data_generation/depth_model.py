@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
+from torch.optim.lr_scheduler import StepLR
 import optuna
 from data_generation import matrix
 
@@ -136,39 +137,50 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
         print("CUDA is not available.")
         return None, None, None, None
 
-    # Loss function
-    criterion = nn.L1Loss()  # Mean Absolute Error
-
-    # Optimizer
+    # Hyperparameters optimizer
     def objective(trial):
-        # Hyperparameters search space
-        lr = trial.suggest_loguniform('lr', 1e-5, 1e-2)
-        weight_decay = trial.suggest_loguniform('weight_decay', 1e-6, 1e-3)
-        
-        # Initialize model and training to find hyperparameters
+        # Define the hyperparameter search space
+        lr = trial.suggest_float('lr', 1e-5, 1e-2, log=True)  # Learning rate
+        weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)  # Weight decay
+        step_size = trial.suggest_int('step_size', 2, 5)  # Frequency (epochs) for reducing LR
+        gamma = trial.suggest_float('gamma', 0.1, 0.9)  # Reduction factor for LR
+    
+        # Initialize model, optimizer and scheduler
         model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        criterion = nn.L1Loss()
-        
-        # Evaluate hyperparameters on a few epochs
+        scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)  # Scheduler for dynamic LR adjustment
+        criterion = nn.L1Loss()  # Loss function
+    
+        # Simplified training loop to evaluate hyperparameters
         model.train()
         train_loss = 0.0
-        for epoch in range(5):
+        for epoch in range(20):
             running_loss = 0.0
             for batch in train_loader:
                 X_signal, y_true, x_distance = batch
                 X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
-                
+    
+                # Zero gradients
                 optimizer.zero_grad()
+                # Forward pass
                 y_pred = model(X_signal, x_distance)
+                # Compute loss
                 loss = criterion(y_pred, y_true)
+                # Backward pass and optimizer step
                 loss.backward()
                 optimizer.step()
+            
                 running_loss += loss.item()
+    
+            # Dynamically reduce learning rate using the scheduler
+            scheduler.step()
+    
+            # Accumulate the average loss
             train_loss += running_loss / len(train_loader)
-        
-        # Retourne la perte moyenne pour Optuna
+    
+        # Return the average loss over the epochs for Optuna
         return train_loss / 5
+
 
     # Launch optuna hyperparameters optimization
     hyperparam_study = optuna.create_study(direction="minimize")
@@ -178,6 +190,8 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
     # Set model and optimizer using best hyperparameters
     model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=hyperparams['lr'], weight_decay=hyperparams['weight_decay'])
+    scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
+    criterion = nn.L1Loss()  # Mean Absolute Error
     
     print(f"Successfully initialized model using {device} and hyperparameters {hyperparams}.")
     
@@ -212,6 +226,9 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
     
             # Accumulate loss for reporting
             running_loss += loss.item()
+
+        # Dynamically reduce learning rate using the scheduler
+        scheduler.step()
 
         # Calculate mean loss for this epoch
         mean_loss = running_loss / len(train_loader)
