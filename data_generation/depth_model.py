@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
+import optuna
 from data_generation import matrix
 
 
@@ -134,14 +135,51 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
     if device.type == "cpu":
         print("CUDA is not available.")
         return None, None, None, None
-    
-    model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
-    print(f"Successfully initialized model using {device}.")
 
-    # Loss function and optimizer
-    criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
-    print("Successfully set loss criterion and optimizer.")
+    # Loss function
+    criterion = nn.L1Loss()  # Mean Absolute Error
+
+    # Optimizer
+    def objective(trial):
+        # Hyperparameters search space
+        lr = trial.suggest_loguniform('lr', 1e-5, 1e-2)
+        weight_decay = trial.suggest_loguniform('weight_decay', 1e-6, 1e-3)
+        
+        # Initialize model and training to find hyperparameters
+        model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        criterion = nn.L1Loss()
+        
+        # Evaluate hyperparameters on a few epochs
+        model.train()
+        train_loss = 0.0
+        for epoch in range(5):
+            running_loss = 0.0
+            for batch in train_loader:
+                X_signal, y_true, x_distance = batch
+                X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
+                
+                optimizer.zero_grad()
+                y_pred = model(X_signal, x_distance)
+                loss = criterion(y_pred, y_true)
+                loss.backward()
+                optimizer.step()
+                running_loss += loss.item()
+            train_loss += running_loss / len(train_loader)
+        
+        # Retourne la perte moyenne pour Optuna
+        return train_loss / 5
+
+    # Launch optuna hyperparameters optimization
+    hyperparam_study = optuna.create_study(direction="minimize")
+    hyperparam_study.optimize(objective, n_trials=20)
+    hyperparams = hyperparam_study.best_params
+
+    # Set model and optimizer using best hyperparameters
+    model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=hyperparams['lr'], weight_decay=hyperparams['weight_decay'])
+    
+    print(f"Successfully initialized model using {device} and hyperparameters {hyperparams}.")
     
     # Training
     train_losses = []
