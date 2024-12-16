@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from torch.optim.lr_scheduler import StepLR
 import optuna
+optuna.logging.set_verbosity(optuna.logging.WARNING) # Show only warnings and errors
 from data_generation import matrix
 
 
@@ -183,7 +184,7 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
 
 
     # Launch optuna hyperparameters optimization
-    hyperparam_study = optuna.create_study(direction="minimize")
+    hyperparam_study = optuna.create_study(study_name="depth_model_optimization", direction="minimize")
     hyperparam_study.optimize(objective, n_trials=20)
     hyperparams = hyperparam_study.best_params
 
