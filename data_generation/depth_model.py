@@ -140,51 +140,52 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
 
     # Hyperparameters optimizer
     def objective(trial):
-        # Define the hyperparameter search space
-        lr = trial.suggest_float('lr', 1e-5, 1e-2, log=True)  # Learning rate
-        weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)  # Weight decay
-        step_size = trial.suggest_int('step_size', 2, 5)  # Frequency (epochs) for reducing LR
-        gamma = trial.suggest_float('gamma', 0.1, 0.9)  # Reduction factor for LR
+        # Suggest hyperparameters
+        lr = trial.suggest_float('lr', 1e-5, 1e-2, log=True)
+        weight_decay = trial.suggest_float('weight_decay', 1e-6, 1e-3, log=True)
+        step_size = trial.suggest_int('step_size', 2, 5)
+        gamma = trial.suggest_float('gamma', 0.1, 0.9)
     
-        # Initialize model, optimizer and scheduler
+        # Initialize model, optimizer, and scheduler
         model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-        scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)  # Scheduler for dynamic LR adjustment
-        criterion = nn.L1Loss()  # Loss function
+        scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
+        criterion = nn.L1Loss()
     
-        # Simplified training loop to evaluate hyperparameters
+        # Training loop with validation
         model.train()
-        train_loss = 0.0
-        for epoch in range(20):
-            running_loss = 0.0
+        for epoch in range(20):  # Use a reduced number of epochs
+            # Training loop
             for batch in train_loader:
                 X_signal, y_true, x_distance = batch
                 X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
     
-                # Zero gradients
                 optimizer.zero_grad()
-                # Forward pass
                 y_pred = model(X_signal, x_distance)
-                # Compute loss
                 loss = criterion(y_pred, y_true)
-                # Backward pass and optimizer step
                 loss.backward()
                 optimizer.step()
-            
-                running_loss += loss.item()
     
-            # Dynamically reduce learning rate using the scheduler
+            # Step the scheduler
             scheduler.step()
     
-            # Accumulate the average loss
-            train_loss += running_loss / len(train_loader)
+        # Validation loop
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for batch in val_loader:
+                X_signal, y_true, x_distance = batch
+                X_signal, y_true, x_distance = X_signal.to(device), y_true.to(device), x_distance.to(device)
     
-        # Return the average loss over the epochs for Optuna
-        return train_loss / 5
-
+                y_pred = model(X_signal, x_distance)
+                loss = criterion(y_pred, y_true)
+                val_loss += loss.item()
+    
+        # Return the average validation loss
+        return val_loss / len(val_loader)
 
     # Launch optuna hyperparameters optimization
-    hyperparam_study = optuna.create_study(study_name="depth_model_optimization", direction="minimize", storage="sqlite:///models/param_optim/optuna_studies.db")
+    hyperparam_study = optuna.create_study(direction="minimize", storage="sqlite:///models/param_optim/optuna_studies.db")
     hyperparam_study.optimize(objective, n_trials=20)
     hyperparams = hyperparam_study.best_params
 
