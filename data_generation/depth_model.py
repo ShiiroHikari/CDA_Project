@@ -184,14 +184,14 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
 
 
     # Launch optuna hyperparameters optimization
-    hyperparam_study = optuna.create_study(study_name="depth_model_optimization", direction="minimize")
+    hyperparam_study = optuna.create_study(study_name="depth_model_optimization", direction="minimize", storage="sqlite:///models/param_optim/optuna_studies.db")
     hyperparam_study.optimize(objective, n_trials=20)
     hyperparams = hyperparam_study.best_params
 
     # Set model and optimizer using best hyperparameters
     model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=hyperparams['lr'], weight_decay=hyperparams['weight_decay'])
-    scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
+    scheduler = StepLR(optimizer, step_size=hyperparams['step_size'], gamma=hyperparams['gamma'])
     criterion = nn.L1Loss()  # Mean Absolute Error
     
     print(f"Successfully initialized model using {device} and hyperparameters {hyperparams}.")
