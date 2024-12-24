@@ -105,7 +105,7 @@ class DepthModel(nn.Module):
 
 
 # Run the model (train, validation and test)
-def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0, epochs=100, include_distance=True, use_TauP=False):
+def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0, epochs=100, include_distance=True, use_TauP=True, plot=False, save_plot=True):
     # Prepare train, validation, and test datasets
     train_depths = np.linspace(0, 100e3, batch_size)  # So all depths are considered for training
     X_train, y_train, D_train, signal_shape = matrix.dataset_generation(num_entries=batch_size, num_stations=num_stations, depth_list=train_depths, rand_inactive=rand_inactive, use_TauP=use_TauP)
@@ -146,7 +146,7 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
         step_size = trial.suggest_int('step_size', 2, 5)
         gamma = trial.suggest_float('gamma', 0.1, 0.9)
     
-        # Initialize model, optimizer, and scheduler
+        # Initialize model, optimizer, scheduler and misfit
         model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma)
@@ -287,12 +287,114 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
     torch.save(model.state_dict(), 'models/' + model_path)
     print(f'Saved model as "{model_path}".')
 
+    # Plot if True
+    if plot:
+        epochs = range(1, len(train_losses) + 1)
+        plt.figure(figsize=(15,3))
+        plt.plot(epochs, train_losses, label="Train Loss")
+        plt.plot(epochs, val_losses, label="Validation Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title(f"Training Loss for model {model_path_name} ; Test Loss : {test_loss:.0e}", fontweight='bold')
+        plt.legend()
+        plt.grid()
+        plt.tight_layout()
+        if save_plot:
+            plt.savefig(f"figures/Training Loss {model_path_name}.png", bbox_inches="tight")
+        plt.show()
+
     return model_path_name, train_losses, val_losses, test_loss
 
 
 
 
-def run_DepthModel(model_path, device_name="cuda", num_stations=50, rand_inactive=0, include_distance=True, depth_list=None, plot=False, save_plot=False, use_TauP=False):
+def test_DepthModel(model_name, device_name="cuda", num_test=1000, num_stations=50, rand_inactive=0, include_distance=True, use_TauP=True, plot=False, save_plot=True):
+    '''
+    Data should have the same parameters (num_stations, include_distance) as the model used.
+    
+    Parameters:
+    - num_test : number of tests to do
+    - num_stations : number of stations per event
+    - include_distance : use stations to epicenter distance to train the model
+    '''
+    # Get model_path
+    model_path = "cuda_DepthModel_" + model_name + ".pth"
+    
+    # Generate num_test depths linearily between 0 and 100 km
+    real_depths = np.linspace(0, 100e3, num_test)
+
+    # Batch size for testing
+    batch_size = 64  # Adjust based on memory constraints
+
+    # Generate a dummy dataset entry to determine signal_len
+    _, _, _, signal_shape = matrix.dataset_generation(
+        num_entries=1,
+        num_stations=num_stations,
+        depth_list=[real_depths[0]],
+        rand_inactive=rand_inactive,
+        use_TauP=use_TauP
+    )
+
+    # Initialize the model once with the determined signal length
+    model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance)
+    model.load_state_dict(torch.load('models/' + model_path, weights_only=True))
+    model.eval()  # Set the model to evaluation mode
+    device = torch.device(device_name)
+    model = model.to(device)
+
+    # Prepare to store predictions
+    predicted_depths = np.zeros(num_test)
+
+    for start_idx in range(0, num_test, batch_size):
+        end_idx = min(start_idx + batch_size, num_test)
+        batch_depths = real_depths[start_idx:end_idx]
+
+        # Generate data for the current batch
+        X_cpu, y, D, _ = matrix.dataset_generation(
+            num_entries=len(batch_depths),
+            num_stations=num_stations,
+            depth_list=batch_depths,
+            rand_inactive=rand_inactive,
+            use_TauP=use_TauP
+        )
+
+        # Ensure X and D are on the correct device
+        X = X_cpu.to(device)
+        if include_distance:
+            D = D.to(device)
+
+        # Batch prediction
+        with torch.no_grad():
+            if include_distance:
+                batch_predicted_depths = model(X, D)
+            else:
+                batch_predicted_depths = model(X)
+
+        # Store predictions
+        predicted_depths[start_idx:end_idx] = batch_predicted_depths.cpu().numpy().squeeze()
+
+    # Save delta depth
+    delta_depth = predicted_depth - real_depth
+    
+    # Plot if True
+    if plot:
+        plt.figure(figsize=(15,3))
+        plt.scatter(real_depth/1e3, delta_depth/1e3, marker='.')
+        plt.xlabel("Depth (km)")
+        plt.ylabel("Delta (km)")
+        plt.title(f"Difference between predicted and real depth for model {model_name}", fontweight='bold')
+        plt.grid()
+        plt.tight_layout()
+        if save_plot:
+            plt.savefig(f"figures/Depth delta {model_name}.png", bbox_inches="tight")
+        plt.show()
+
+    return real_depths, predicted_depths, delta_depth
+
+
+
+
+def run_random_DepthModel(model_name, device_name="cuda", num_stations=50, rand_inactive=0, include_distance=True, depth_list=None, plot=False, save_plot=True, use_TauP=True):
     '''
     Data should have the same parameters (num_stations, include_distance) as the model used.
     
@@ -301,6 +403,9 @@ def run_DepthModel(model_path, device_name="cuda", num_stations=50, rand_inactiv
     - include_distance : use stations to epicenter distance to train the model
     - depth_list : list of depth (m) to generate the data (should have num_entries length)
     '''
+    # Get model_path
+    model_path = "cuda_DepthModel_" + model_name + ".pth"
+    
     # Get a single matrix
     X_cpu, y, D, signal_shape = matrix.dataset_generation(num_entries=1, num_stations=num_stations, depth_list=depth_list, rand_inactive=rand_inactive, use_TauP=use_TauP)
 
@@ -355,73 +460,3 @@ def run_DepthModel(model_path, device_name="cuda", num_stations=50, rand_inactiv
     delta_depth = predicted_depth.item() - y.item()
 
     return delta_depth
-
-
-
-
-def test_DepthModel(model_path="cuda_DepthModel.pth", device_name="cuda", num_test=1000, num_stations=50, rand_inactive=0, include_distance=True, use_TauP=False):
-    '''
-    Data should have the same parameters (num_stations, include_distance) as the model used.
-    
-    Parameters:
-    - num_test : number of tests to do
-    - num_stations : number of stations per event
-    - include_distance : use stations to epicenter distance to train the model
-    '''
-    # Generate num_test depths linearily between 0 and 100 km
-    real_depths = np.linspace(0, 100e3, num_test)
-
-    # Batch size for testing
-    batch_size = 64  # Adjust based on memory constraints
-
-    # Generate a dummy dataset entry to determine signal_len
-    _, _, _, signal_shape = matrix.dataset_generation(
-        num_entries=1,
-        num_stations=num_stations,
-        depth_list=[real_depths[0]],
-        rand_inactive=rand_inactive,
-        use_TauP=use_TauP
-    )
-
-    # Initialize the model once with the determined signal length
-    model = DepthModel(signal_len=signal_shape, num_stations=num_stations, include_distance=include_distance)
-    model.load_state_dict(torch.load('models/' + model_path, weights_only=True))
-    model.eval()  # Set the model to evaluation mode
-    device = torch.device(device_name)
-    model = model.to(device)
-
-    # Prepare to store predictions
-    predicted_depths = np.zeros(num_test)
-
-    for start_idx in range(0, num_test, batch_size):
-        end_idx = min(start_idx + batch_size, num_test)
-        batch_depths = real_depths[start_idx:end_idx]
-
-        # Generate data for the current batch
-        X_cpu, y, D, _ = matrix.dataset_generation(
-            num_entries=len(batch_depths),
-            num_stations=num_stations,
-            depth_list=batch_depths,
-            rand_inactive=rand_inactive,
-            use_TauP=use_TauP
-        )
-
-        # Ensure X and D are on the correct device
-        X = X_cpu.to(device)
-        if include_distance:
-            D = D.to(device)
-
-        # Batch prediction
-        with torch.no_grad():
-            if include_distance:
-                batch_predicted_depths = model(X, D)
-            else:
-                batch_predicted_depths = model(X)
-
-        # Store predictions
-        predicted_depths[start_idx:end_idx] = batch_predicted_depths.cpu().numpy().squeeze()
-
-    return real_depths, predicted_depths
-
-
-

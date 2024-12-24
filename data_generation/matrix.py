@@ -8,13 +8,14 @@ Created on Sat Nov 19 23:57:18 2024
 
 
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import data_generation.signal
 
 
 
 # Generate one matrix
-def generate_matrix(num_stations=50, depth=None, rand_inactive=0, use_TauP=False):
+def generate_matrix(num_stations=50, depth=None, rand_inactive=0, use_TauP=True, plot=False):
     """
     Generates a matrix and depth associated.
     
@@ -40,6 +41,24 @@ def generate_matrix(num_stations=50, depth=None, rand_inactive=0, use_TauP=False
     # Build matrix
     for i, (envelope, _, _) in enumerate(results):
         signal_matrix[i, :] = envelope
+
+    # Plot if True
+    if plot:
+        plt.figure(figsize=(10,7))
+        plt.imshow(signal_matrix, aspect='auto', cmap='viridis', origin='upper')
+        
+        # Adjust x-axis to represent time in seconds
+        num_columns = len(signal_matrix[0])  # Number of columns in the matrix
+        plt.xticks(
+            ticks=np.arange(0, num_columns, step=200),  # Adjust step size as needed
+            labels=np.arange(0, num_columns / 20, step=200 / 20)  # Convert to seconds (1/20 of a second since 20 Hz sampling)
+        )
+        plt.xlabel('Time (s)')
+        plt.ylabel('Signals (organized by distance)')
+        plt.title(f'Depth : {depth/1e3:.2f} km')
+        plt.tight_layout()
+        plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=14, fontweight='bold', y=1.02)
+        plt.show()
 
     return signal_matrix, depth, distances
 
@@ -70,7 +89,7 @@ def normalize_distances(distances, min_distance, max_distance):
 
 
 # Generate multiple matrix for model training
-def dataset_generation(num_entries=32, num_stations=50, depth_list=None, rand_inactive=0, use_TauP=False):
+def dataset_generation(num_entries=32, num_stations=50, depth_list=None, rand_inactive=0, use_TauP=True):
     """
     Generates a dataset containing signal matrices and their corresponding depths.
     

@@ -231,7 +231,7 @@ def extract_hilbert_envelope(signal):
 
 
 # Generate signal from delta_pP and delta_sP
-def generate_one_signal(plot=False, depth=None, use_TauP=False):
+def generate_one_signal(plot=False, depth=None, use_TauP=True):
     # Generate arrival times
     deltas, source, stations = data_generation.arrival_time.generate_arrival_samples(num_stations=1, depth=depth, use_TauP=use_TauP)
     delta_pP, delta_sP = deltas[0][0], deltas[0][1]
@@ -340,7 +340,7 @@ def reorganise_distance(deltas, source, stations):
     
     
 # Generate signal from delta_pP and delta_sP for multiple stations
-def generate_signals(num_stations=50, depth=None, rand_inactive=0, use_TauP=False):
+def generate_signals(num_stations=50, depth=None, rand_inactive=0, use_TauP=True):
     """
     Generate signals for multiple stations given a single source.
     
