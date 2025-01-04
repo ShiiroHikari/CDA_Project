@@ -293,6 +293,7 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
         plt.figure(figsize=(15,3))
         plt.plot(epochs, train_losses, label="Train Loss")
         plt.plot(epochs, val_losses, label="Validation Loss")
+        plt.axhline(y=test_loss, label="Test Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.title(f"Training Loss for model {model_path_name} ; Test Loss : {test_loss:.0e}", fontweight='bold')
