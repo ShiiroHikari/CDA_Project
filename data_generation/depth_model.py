@@ -181,11 +181,11 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
                 loss = criterion(y_pred, y_true)
                 val_loss += loss.item()
     
-        # Return the average validation loss
+        # Return the average validation loss (to minimize)
         return val_loss / len(val_loader)
 
     # Launch optuna hyperparameters optimization
-    hyperparam_study = optuna.create_study(direction="minimize", storage="sqlite:///models/param_optim/optuna_studies.db")
+    hyperparam_study = optuna.create_study(direction="minimize")
     hyperparam_study.optimize(objective, n_trials=20)
     hyperparams = hyperparam_study.best_params
 
@@ -293,7 +293,7 @@ def train_DepthModel(model_name, batch_size=64, num_stations=50, rand_inactive=0
         plt.figure(figsize=(15,3))
         plt.plot(epochs, train_losses, label="Train Loss")
         plt.plot(epochs, val_losses, label="Validation Loss")
-        plt.axhline(y=test_loss, label="Test Loss")
+        plt.axhline(y=test_loss, c='k', label="Test Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.title(f"Training Loss for model {model_path_name} ; Test Loss : {test_loss:.0e}", fontweight='bold')
@@ -375,22 +375,22 @@ def test_DepthModel(model_name, device_name="cuda", num_test=1000, num_stations=
         predicted_depths[start_idx:end_idx] = batch_predicted_depths.cpu().numpy().squeeze()
 
     # Save delta depth
-    delta_depth = predicted_depth - real_depth
+    delta_depths = predicted_depths - real_depths
     
     # Plot if True
     if plot:
         plt.figure(figsize=(15,3))
-        plt.scatter(real_depth/1e3, delta_depth/1e3, marker='.')
+        plt.scatter(real_depths/1e3, delta_depths/1e3, marker='.')
         plt.xlabel("Depth (km)")
         plt.ylabel("Delta (km)")
-        plt.title(f"Difference between predicted and real depth for model {model_name}", fontweight='bold')
+        plt.title(f"Difference between predicted and real depths for model {model_name}", fontweight='bold')
         plt.grid()
         plt.tight_layout()
         if save_plot:
             plt.savefig(f"figures/Depth delta {model_name}.png", bbox_inches="tight")
         plt.show()
 
-    return real_depths, predicted_depths, delta_depth
+    return real_depths, predicted_depths, delta_depths
 
 
 

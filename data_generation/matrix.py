@@ -9,6 +9,7 @@ Created on Sat Nov 19 23:57:18 2024
 
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import data_generation.signal
 
@@ -44,20 +45,38 @@ def generate_matrix(num_stations=50, depth=None, rand_inactive=0, use_TauP=True,
 
     # Plot if True
     if plot:
-        plt.figure(figsize=(10,7))
-        plt.imshow(signal_matrix, aspect='auto', cmap='viridis', origin='upper')
+        # Set Seaborn style
+        sns.set_style("whitegrid")
+        
+        # Create the heatmap
+        plt.figure(figsize=(10, 7))
+        ax = sns.heatmap(
+            signal_matrix, 
+            cmap='coolwarm', 
+            cbar=False, 
+            xticklabels=False, 
+            yticklabels=False
+        )
         
         # Adjust x-axis to represent time in seconds
-        num_columns = len(signal_matrix[0])  # Number of columns in the matrix
-        plt.xticks(
-            ticks=np.arange(0, num_columns, step=200),  # Adjust step size as needed
-            labels=np.arange(0, num_columns / 20, step=200 / 20)  # Convert to seconds (1/20 of a second since 20 Hz sampling)
-        )
+        num_columns = signal_matrix.shape[1]
+        xtick_positions = np.arange(0, num_columns, step=200)  # Adjust step size as needed
+        xtick_labels = np.arange(0, num_columns / 20, step=200 / 20)  # Convert to seconds
+        ax.set_xticks(xtick_positions)
+        ax.set_xticklabels(xtick_labels)
+        
+        # Add axis labels and title
         plt.xlabel('Time (s)')
-        plt.ylabel('Signals (organized by distance)')
-        plt.title(f'Depth : {depth/1e3:.2f} km')
+        plt.ylabel('Signals (organized by increasing distance)')
+        plt.title(f'Depth : {depth/1e3:.2f} km', fontsize=12)
+        plt.suptitle(
+            'Main Energetic Envelope of the Z-normalized Signals Aligned with P-arrival', 
+            fontsize=14, 
+            fontweight='bold', 
+            y=1.02
+        )
+        
         plt.tight_layout()
-        plt.suptitle('Main Energetic envelope of the Z-normalized signals aligned with P-arrival', fontsize=14, fontweight='bold', y=1.02)
         plt.show()
 
     return signal_matrix, depth, distances

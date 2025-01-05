@@ -9,6 +9,7 @@ Created on Sat Nov 19 15:20:37 2024
 
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import random
 import math
 from scipy.signal import butter, filtfilt, hilbert, decimate
@@ -255,55 +256,59 @@ def generate_one_signal(plot=False, depth=None, use_TauP=True):
     envelope = decimate(envelope, q=5, zero_phase=True)
 
     if plot is True:
-        plt.figure(figsize=(15, 8))
-
-        plt.subplot(511)
-        plt.stem(time, diracs, markerfmt=' ', basefmt=' ')
-        plt.vlines(delta_pP, min(diracs), max(diracs), color='r')
-        plt.vlines(delta_sP, min(diracs), max(diracs), color='r')
-        plt.title("Diracs")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.grid()
+        sns.set_style("whitegrid")  # Set style
+        sns.set_palette("deep")  # Use a Seaborn color palette
         
-        plt.subplot(512)
-        plt.plot(time, signal)
-        plt.vlines(delta_pP, min(signal), max(signal), color='r')
-        plt.vlines(delta_sP, min(signal), max(signal), color='r')
-        plt.title("Signal")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.grid()
-
-        plt.subplot(513)
-        plt.plot(time, noisy_signal)
-        plt.vlines(delta_pP, min(noisy_signal), max(noisy_signal), color='r')
-        plt.vlines(delta_sP, min(noisy_signal), max(noisy_signal), color='r')
-        plt.title(f"Noisy signal (SNR = {snr_db:.1f} dB)")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.grid()
-
-        plt.subplot(514)
-        plt.plot(time, filtered_signal)
-        plt.vlines(delta_pP, min(filtered_signal), max(filtered_signal), color='r')
-        plt.vlines(delta_sP, min(filtered_signal), max(filtered_signal), color='r')
-        plt.title("Filtered signal")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.grid()
-
-        plt.subplot(515)
+        fig, axes = plt.subplots(5, 1, figsize=(15, 8), constrained_layout=True)
+        
+        # Subplot 1: Diracs
+        axes[0].stem(time, diracs, markerfmt=' ', basefmt=' ', linefmt=sns.color_palette()[0])
+        axes[0].vlines(delta_pP, min(diracs), max(diracs), color=sns.color_palette()[1])
+        axes[0].vlines(delta_sP, min(diracs), max(diracs), color=sns.color_palette()[1])
+        axes[0].axhline(0, color='gray', linewidth=0.5)
+        axes[0].set_title("Diracs")
+        axes[0].set_ylabel("Amplitude")
+        axes[0].set_yticks([])  # Hide y-axis ticks
+        
+        # Subplot 2: Signal
+        sns.lineplot(ax=axes[1], x=time, y=signal)
+        axes[1].vlines(delta_pP, min(signal), max(signal), color=sns.color_palette()[1])
+        axes[1].vlines(delta_sP, min(signal), max(signal), color=sns.color_palette()[1])
+        axes[1].axhline(0, color='gray', linewidth=0.5)
+        axes[1].set_title("Signal")
+        axes[1].set_ylabel("Amplitude")
+        axes[1].set_yticks([])  # Hide y-axis ticks
+        
+        # Subplot 3: Noisy Signal
+        sns.lineplot(ax=axes[2], x=time, y=noisy_signal)
+        axes[2].vlines(delta_pP, min(noisy_signal), max(noisy_signal), color=sns.color_palette()[1])
+        axes[2].vlines(delta_sP, min(noisy_signal), max(noisy_signal), color=sns.color_palette()[1])
+        axes[2].axhline(0, color='gray', linewidth=0.5)
+        axes[2].set_title(f"Noisy signal (SNR = {snr_db:.1f} dB)")
+        axes[2].set_ylabel("Amplitude")
+        axes[2].set_yticks([])  # Hide y-axis ticks
+        
+        # Subplot 4: Filtered Signal
+        sns.lineplot(ax=axes[3], x=time, y=filtered_signal)
+        axes[3].vlines(delta_pP, min(filtered_signal), max(filtered_signal), color=sns.color_palette()[1])
+        axes[3].vlines(delta_sP, min(filtered_signal), max(filtered_signal), color=sns.color_palette()[1])
+        axes[3].axhline(0, color='gray', linewidth=0.5)
+        axes[3].set_title("Filtered signal")
+        axes[3].set_ylabel("Amplitude")
+        axes[3].set_yticks([])  # Hide y-axis ticks
+        
+        # Subplot 5: Normalized Hilbert Envelope
         time_envelope = np.arange(0, 60, 1/20)
-        plt.plot(time_envelope, envelope)
-        plt.vlines(delta_pP, min(envelope), max(envelope), color='r')
-        plt.vlines(delta_sP, min(envelope), max(envelope), color='r')
-        plt.title("Normalized Hilbert envelope")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Amplitude")
-        plt.grid()
+        sns.lineplot(ax=axes[4], x=time_envelope, y=envelope)
+        axes[4].vlines(delta_pP, min(envelope), max(envelope), color=sns.color_palette()[1])
+        axes[4].vlines(delta_sP, min(envelope), max(envelope), color=sns.color_palette()[1])
+        axes[4].axhline(0, color='gray', linewidth=0.5)
+        axes[4].set_title("Normalized Hilbert envelope")
+        axes[4].set_xlabel("Time (s)")
+        axes[4].set_ylabel("Amplitude")
+        axes[4].set_yticks([])  # Hide y-axis ticks
         
-        plt.tight_layout()
+        # Show plot
         plt.show()
         
     return envelope, source, stations
